@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 import config
+import aiohttp
+import re
 
 class RegistrationModal(discord.ui.Modal, title='Kayıt Formu'):
     nickname = discord.ui.TextInput(
@@ -26,7 +28,7 @@ class RegistrationModal(discord.ui.Modal, title='Kayıt Formu'):
         embed.add_field(name="Takma Ad", value=self.nickname.value, inline=False)
         embed.add_field(name="Roblox URL", value=self.roblox_url.value, inline=False)
         
-        view = ApprovalView(user_id=interaction.user.id, nickname=self.nickname.value)
+        view = ApprovalView(user_id=interaction.user.id, nickname=self.nickname.value, roblox_url=self.roblox_url.value)
         await approval_channel.send(embed=embed, view=view)
         await interaction.response.send_message("Kayıt formun yetkililere gönderildi, lütfen bekle.", ephemeral=True)
 
@@ -72,16 +74,35 @@ class RejectModal(discord.ui.Modal, title='Reddetme Sebebi'):
         await interaction.response.send_message("Reddedildi.", ephemeral=True)
 
 class ApprovalView(discord.ui.View):
-    def __init__(self, user_id: int, nickname: str):
+    def __init__(self, user_id: int, nickname: str, roblox_url: str):
         super().__init__(timeout=None)
         self.user_id = user_id
         self.nickname = nickname
+        self.roblox_url = roblox_url
+
+    async def get_roblox_username(self, url):
+        # Linkten kullanıcı IDsini çıkarma
+        match = re.search(r"roblox\.com/users/(\d+)", url)
+        if not match:
+            return None
+            
+        user_id = match.group(1)
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(f"https://users.roblox.com/v1/users/{user_id}") as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        return data.get("name") # veya displayName kullanılabilir
+            except Exception:
+                pass
+        return None
 
     @discord.ui.button(label="ONAYLA", style=discord.ButtonStyle.success, custom_id="btn_approve")
     async def approve_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)
         member = interaction.guild.get_member(self.user_id)
         if not member:
-            await interaction.response.send_message("Kullanıcı sunucuda bulunamadı.", ephemeral=True)
+            await interaction.followup.send("Kullanıcı sunucuda bulunamadı.", ephemeral=True)
             return
             
         unverified_role = interaction.guild.get_role(config.ROLE_UNVERIFIED)
@@ -92,20 +113,26 @@ class ApprovalView(discord.ui.View):
         if verified_role:
             await member.add_roles(verified_role)
             
+        roblox_username = await self.get_roblox_username(self.roblox_url)
+        if roblox_username:
+            new_nick = f"{self.nickname} | {roblox_username}"
+        else:
+            new_nick = f"{self.nickname} | (Bulunamadı)"
+            
+        # Discord limit: 32 chars
+        new_nick = new_nick[:32]
+        
         try:
-            # They want [Takma AD] | [Roblox Kullanıcı Adı]
-            # Since we didn't ask for roblox user name explicitly but just the link, we can just put Takma AD
-            # Or extract from URL... Let's just set the Nickname they provided.
-            await member.edit(nick=f"{self.nickname}")
+            await member.edit(nick=new_nick)
         except discord.Forbidden:
-            pass # Missing permissions to change nickname
+            pass # Yetki yetersizliği
             
         embed = interaction.message.embeds[0]
         embed.color = discord.Color.green()
         
         content = f"{interaction.user.mention} tarafından Onaylandı."
         await interaction.message.edit(content=content, embed=embed, view=None)
-        await interaction.response.send_message("Onaylandı.", ephemeral=True)
+        await interaction.followup.send("Onaylandı.", ephemeral=True)
 
     @discord.ui.button(label="REDDET", style=discord.ButtonStyle.danger, custom_id="btn_reject")
     async def reject_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -128,4 +155,3 @@ class Registration(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(Registration(bot))
-    # We should also persist views, but for simplicity we rely on the bot running or custom IDs
