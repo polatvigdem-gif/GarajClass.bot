@@ -86,6 +86,10 @@ class Tickets(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    async def cog_load(self):
+        self.bot.add_view(TicketCreateView())
+        self.bot.add_view(TicketCloseView())
+
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def ticketmesaji(self, ctx):
