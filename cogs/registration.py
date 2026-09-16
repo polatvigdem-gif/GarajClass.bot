@@ -142,6 +142,9 @@ class Registration(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    async def cog_load(self):
+        self.bot.add_view(RegistrationView())
+
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def kayitmesaji(self, ctx):
