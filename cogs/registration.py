@@ -11,7 +11,7 @@ class RegistrationModal(discord.ui.Modal, title='Kayıt Formu'):
     
     roblox_url = discord.ui.TextInput(
         label='Roblox Profil Linki',
-        style=discord.TextStyle.url,
+        style=discord.TextStyle.short,
         placeholder='https://www.roblox.com/users/...',
         required=True
     )
