@@ -29,7 +29,7 @@ class RegistrationModal(discord.ui.Modal, title='Kayıt Formu'):
         embed.add_field(name="Roblox URL", value=self.roblox_url.value, inline=False)
         
         view = ApprovalView(user_id=interaction.user.id, nickname=self.nickname.value, roblox_url=self.roblox_url.value)
-        await approval_channel.send(embed=embed, view=view)
+        await approval_channel.send(content=f"<@&{config.ROLE_REGISTRATION_MANAGER}>", embed=embed, view=view)
         await interaction.response.send_message("Kayıt formun yetkililere gönderildi, lütfen bekle.", ephemeral=True)
 
 class RegistrationView(discord.ui.View):
