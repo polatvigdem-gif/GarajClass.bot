@@ -80,21 +80,37 @@ class ApprovalView(discord.ui.View):
         self.nickname = nickname
         self.roblox_url = roblox_url
 
-    async def get_roblox_username(self, url):
-        # Linkten kullanıcı IDsini çıkarma
-        match = re.search(r"roblox\.com/users/(\d+)", url)
-        if not match:
-            return None
+    async def get_roblox_username(self, text):
+        text = text.strip()
+        # Linkten veya direkt girilen metinden ID çıkarma
+        match = re.search(r"(?:users/|/u/)(\d+)", text)
+        
+        user_id = None
+        if match:
+            user_id = match.group(1)
+        elif text.isdigit():
+            user_id = text
             
-        user_id = match.group(1)
         async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(f"https://users.roblox.com/v1/users/{user_id}") as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        return data.get("name") # veya displayName kullanılabilir
-            except Exception:
-                pass
+            if user_id:
+                try:
+                    async with session.get(f"https://users.roblox.com/v1/users/{user_id}") as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            return data.get("name") # veya displayName
+                except Exception:
+                    pass
+            else:
+                # Eğer ID veya link değilse, direkt kullanıcı adı girilmiş olabilir
+                # Kullanıcı adı ile arama yapalım
+                try:
+                    async with session.post("https://users.roblox.com/v1/usernames/users", json={"usernames": [text], "excludeBannedUsers": False}) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            if data.get("data") and len(data["data"]) > 0:
+                                return data["data"][0].get("name")
+                except Exception:
+                    pass
         return None
 
     @discord.ui.button(label="ONAYLA", style=discord.ButtonStyle.success, custom_id="btn_approve")
