@@ -60,7 +60,7 @@ class TicketCreateView(discord.ui.View):
         }
         
         # Add staff roles
-        staff_roles = [config.ROLE_FOUNDER, config.ROLE_HEAD_ADMIN, config.ROLE_MODERATOR, config.ROLE_SUPPORT_TEAM, config.ROLE_TRIAL_MOD]
+        staff_roles = [config.ROLE_FOUNDER, config.ROLE_HEAD_ADMIN, config.ROLE_MODERATOR, config.ROLE_SUPPORT_TEAM, config.ROLE_TRIAL_MOD, config.ROLE_SENIOR_STAFF, config.ROLE_STAFF, config.ROLE_NEW_TRIAL_STAFF]
         for r_id in staff_roles:
             role = interaction.guild.get_role(r_id)
             if role:
@@ -77,7 +77,9 @@ class TicketCreateView(discord.ui.View):
             description=f"{interaction.user.mention} bir destek talebi oluşturdu.\nYetkililer en kısa sürede ilgilenecek.",
             color=discord.Color.purple()
         )
-        await ticket_channel.send(embed=embed, view=TicketCloseView())
+        
+        mentions = f"<@&{config.ROLE_SENIOR_STAFF}> <@&{config.ROLE_STAFF}> <@&{config.ROLE_NEW_TRIAL_STAFF}>"
+        await ticket_channel.send(content=mentions, embed=embed, view=TicketCloseView())
         await ticket_channel.send(f"[ {interaction.user.mention} Merhabalar, size nasıl yardımcı olabiliriz? Sorununuzu detaylıca yazarsanız sevinirim. ]")
         
         await interaction.response.send_message(f"Biletin oluşturuldu: {ticket_channel.mention}", ephemeral=True)
