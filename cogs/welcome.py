@@ -17,13 +17,8 @@ class Welcome(commands.Cog):
         if unverified_role:
             await member.add_roles(unverified_role)
 
-        # Welcome message, let's send it to a general channel or a welcome channel?
-        # The user didn't specify the welcome channel ID, so we'll just assume they have a system channel
-        # or we could send it to CH_KAYIT_OL (Register channel) or CH_KURALLAR?
-        # I'll just use the system channel or Kayıt Ol if system is None.
-        channel = member.guild.system_channel
-        if not channel:
-            channel = member.guild.get_channel(config.CH_KAYIT_OL)
+        # Welcome message, send it to CH_WELCOME
+        channel = member.guild.get_channel(config.CH_WELCOME)
             
         if channel:
             join_date = member.joined_at.strftime("%d/%m/%Y")
