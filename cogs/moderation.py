@@ -117,5 +117,37 @@ class Moderation(commands.Cog):
             await interaction.response.send_message(f"Bir hata oluştu: {e}", ephemeral=True)
 
 
+    @commands.command(name="temizle")
+    @commands.has_permissions(manage_messages=True)
+    async def temizle(self, ctx, miktar: int):
+        """Belirtilen sayıda mesajı siler."""
+        if miktar <= 0:
+            await ctx.send("Lütfen silinecek mesaj sayısını 0'dan büyük girin.")
+            return
+            
+        try:
+            # +1 for deleting the command message itself
+            deleted = await ctx.channel.purge(limit=miktar + 1)
+            # Send confirmation and delete it after 3 seconds
+            await ctx.send(f"🧹 Başarıyla **{len(deleted)-1}** mesaj silindi.", delete_after=3.0)
+            
+            # Log to İşlemler
+            log_channel = ctx.guild.get_channel(config.CH_ISLEMLER)
+            if log_channel:
+                embed = discord.Embed(
+                    title="Yetkili İşlemi: Mesaj Silme",
+                    color=discord.Color.orange(),
+                    timestamp=datetime.datetime.now()
+                )
+                embed.add_field(name="Kanal", value=ctx.channel.mention, inline=False)
+                embed.add_field(name="İşlemi Yapan", value=ctx.author.mention, inline=False)
+                embed.add_field(name="Silinen Mesaj Sayısı", value=str(len(deleted)-1), inline=False)
+                await log_channel.send(embed=embed)
+                
+        except discord.Forbidden:
+            await ctx.send("Mesajları silmek için yeterli yetkim yok.")
+        except Exception as e:
+            await ctx.send(f"Bir hata oluştu: {e}")
+
 async def setup(bot):
     await bot.add_cog(Moderation(bot))
