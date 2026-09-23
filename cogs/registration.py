@@ -36,6 +36,21 @@ class RegistrationModalRoblox(discord.ui.Modal, title='Kayıt Formu (2/2) - Robl
         await send_to_approval(interaction, self.nickname, self.reason, self.roblox_url.value)
         await interaction.response.send_message("Kayıt formun yetkililere gönderildi, lütfen bekle.", ephemeral=True)
 
+class RobloxFormView(discord.ui.View):
+    def __init__(self, nickname, reason):
+        super().__init__(timeout=300)
+        self.nickname = nickname
+        self.reason = reason
+
+    @discord.ui.button(label="Roblox Profilini Gir", style=discord.ButtonStyle.primary, emoji="🎮")
+    async def btn_roblox(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(RegistrationModalRoblox(self.nickname, self.reason))
+        # Butona basıldıktan sonra mesajı silebiliriz
+        try:
+            await interaction.message.delete()
+        except:
+            pass
+
 class RegistrationModalMain(discord.ui.Modal, title='Kayıt Formu'):
     nickname = discord.ui.TextInput(
         label='Takma Ad',
@@ -53,8 +68,14 @@ class RegistrationModalMain(discord.ui.Modal, title='Kayıt Formu'):
 
     async def on_submit(self, interaction: discord.Interaction):
         if "roblox" in self.reason.value.lower():
-            # Eğer 'roblox' kelimesi geçiyorsa 2. anketi gösteriyoruz
-            await interaction.response.send_modal(RegistrationModalRoblox(self.nickname.value, self.reason.value))
+            # Discord API, bir form gönderildiğinde anında 2. bir form açmaya izin vermez.
+            # Bu yüzden araya bir buton koyuyoruz.
+            view = RobloxFormView(self.nickname.value, self.reason.value)
+            await interaction.response.send_message(
+                "Açıklamanızda **Roblox** kelimesi geçtiği için profil linkinizi girmelisiniz.\nLütfen aşağıdaki butona tıklayın:",
+                view=view,
+                ephemeral=True
+            )
         else:
             # Geçmiyorsa direkt gönder
             await send_to_approval(interaction, self.nickname.value, self.reason.value, None)
